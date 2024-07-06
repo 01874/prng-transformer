@@ -29,8 +29,10 @@ class Config:
     d_mlp: int = 768
     n_heads: int = 8
     n_layers: int = 8
+'''Note: this model only supports equal-sized minibatches for training or inference'''
 # %%
 class Embed(nn.Module):
+    # let the model learn how it wants to embed the tokens
     def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
@@ -41,12 +43,18 @@ class Embed(nn.Module):
         return self.W_E[tokens]
 # %%
 class PosEmbed(nn.Module):
+    # use absolute learned positional encoding, i.e. let the model learn how it wants to encode position.
+    # might be interesting to look at how it encodes it in the future, and if this changes between generators
     def __init__(self, cfg: Config):
         super().__init__()
+        self.cfg = cfg
         self.W_pos = nn.Parameter(t.empty(cfg.n_ctx, cfg.d_model))
+        nn.init.normal_(self.W_pos, std=cfg.init_range)
     
     def forward(self, tokens: Int[Tensor, "batch position"]) -> Float[Tensor, "batch position d_model"]:
-        pass
+        batch, seq_len = tokens.shape
+        return einops.repeat(self.W_pos[:seq_len], "position d_model -> batch position d_model", batch=batch)
+
 # %%
 class LayerNorm(nn.Module):
     def __init__(self, cfg: Config):
@@ -55,5 +63,12 @@ class LayerNorm(nn.Module):
         self.w = nn.Parameter(t.ones(cfg.d_model))
         self.b = nn.Parameter(t.zeros(cfg.d_model))
     
-    def forward(self, residual: Float[Tensor, "batch position d_model"]) -> Float[Tensor, "batch position d_model"]:
-        pass
+    def forward(self, resid: Float[Tensor, "batch position d_model"]) -> Float[Tensor, "batch position d_model"]:
+        mu = resid.mean(dim=-1, keepdim=True)
+        sigma = (resid.var(dim=-1, keepdim=True, unbiased=False) + self.cfg.layer_norm_eps).sqrt()
+        resid -= mu
+        resid /= sigma
+        resid *= self.w
+        resid += self.b
+        return resid
+# %%
