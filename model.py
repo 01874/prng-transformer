@@ -29,6 +29,19 @@ class Config:
     d_mlp: int = 768
     n_heads: int = 8
     n_layers: int = 8
+# %%
+def rand_input_test(layer_class, shape, float: bool=True):
+    cfg = Config(debug=True)
+    layer = layer_class(cfg).to(device)
+    if float:
+        rand_input = t.randn(shape).to(device)
+    else:
+        rand_input = t.randint(200, 500, shape).to(device)
+    print("Input shape: ", rand_input.shape)
+    out = layer(rand_input)
+    if isinstance(out, tuple): out = out[0]
+    print("Output shape: ", out.shape, "\n")
+
 '''Note: this model only supports equal-sized minibatches for training or inference'''
 # %%
 class Embed(nn.Module):
