@@ -24,7 +24,7 @@ class Config:
     layer_norm_eps: float = 1e-5
     d_vocab: int = 2
     init_range: float = 0.02
-    n_ctx: int = 2048
+    n_ctx: int = 1024
     d_head: int = 32
     d_mlp: int = 768
     n_heads: int = 8
@@ -36,7 +36,7 @@ def rand_input_test(layer_class, shape, float: bool=True):
     if float:
         rand_input = t.randn(shape).to(device)
     else:
-        rand_input = t.randint(200, 500, shape).to(device)
+        rand_input = t.randint(0, cfg.d_vocab, shape).to(device)
     print("Input shape: ", rand_input.shape)
     out = layer(rand_input)
     if isinstance(out, tuple): out = out[0]
@@ -53,6 +53,7 @@ class Embed(nn.Module):
         nn.init.normal_(self.W_E, std=cfg.init_range)
 
     def forward(self, tokens: Int[Tensor, "batch position"]) -> Float[Tensor, "batch position d_model"]:
+        print(tokens.shape)
         return self.W_E[tokens]
 # %%
 class PosEmbed(nn.Module):
@@ -84,4 +85,9 @@ class LayerNorm(nn.Module):
         resid *= self.w
         resid += self.b
         return resid
+# %%
+'''Tests'''
+rand_input_test(Embed, [2, 4], float=False)
+rand_input_test(PosEmbed, [2, 4], float=False)
+rand_input_test(LayerNorm, [2, 4, 256])
 # %%
