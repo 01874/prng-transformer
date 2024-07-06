@@ -30,3 +30,30 @@ class Config:
     n_heads: int = 8
     n_layers: int = 8
 # %%
+class Embed(nn.Module):
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.cfg = cfg
+        self.W_E = nn.Parameter(t.empty((cfg.d_vocab, cfg.d_model)))
+        nn.init.normal_(self.W_E, std=cfg.init_range)
+
+    def forward(self, tokens: Int[Tensor, "batch position"]) -> Float[Tensor, "batch position d_model"]:
+        return self.W_E[tokens]
+# %%
+class PosEmbed(nn.Module):
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.W_pos = nn.Parameter(t.empty(cfg.n_ctx, cfg.d_model))
+    
+    def forward(self, tokens: Int[Tensor, "batch position"]) -> Float[Tensor, "batch position d_model"]:
+        pass
+# %%
+class LayerNorm(nn.Module):
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.cfg = cfg
+        self.w = nn.Parameter(t.ones(cfg.d_model))
+        self.b = nn.Parameter(t.zeros(cfg.d_model))
+    
+    def forward(self, residual: Float[Tensor, "batch position d_model"]) -> Float[Tensor, "batch position d_model"]:
+        pass
