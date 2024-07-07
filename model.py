@@ -180,9 +180,34 @@ class Attention(nn.Module):
         attn_out = einops.einsum(result, "batch position n_heads d_model -> batch position d_model") + self.b_O
         return attn_out
 # %%
+class MLP(nn.Module):
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.cfg = cfg
+        self.W_in = nn.Parameter(t.empty((cfg.d_model, cfg.d_mlp)))
+        self.b_in = nn.Parameter(t.zeros((cfg.d_mlp)))
+        self.W_out = nn.Parameter(t.empty((cfg.d_mlp, cfg.d_model)))
+        self.b_out = nn.Parameter(t.zeros((cfg.d_model)))
+        nn.init.normal_(self.W_in, std=self.cfg.init_range)
+        nn.init.normal_(self.W_out, std=self.cfg.init_range)
+    
+    def forward(self, norm_resid: Float[Tensor, "batch position d_model"]) -> Float[Tensor, "batch position d_model"]:
+        '''
+        Matmul represents the residual stream passing through the first nodes of the mlp layer, after gelu this is the value of the hidden layer of neurons
+        Then the next matmul represents the stream passing through the hidden layer to the output layer, and the result is the activations of the output layer.
+        MLPs can implement things like knowledge, being a key-value pair, etc. The same operation is done at every place in the residual stream.
+        '''
+        hidden = einops.einsum(norm_resid, self.W_in, "batch position d_model, d_model d_mlp -> batch position d_mlp") + self.b_in
+        gelu = nn.GELU(approximate='tanh')
+        hidden = gelu(hidden)
+        mlp_out = einops.einsum(hidden, self.W_out, "batch position d_mlp, d_mlp d_model -> batch position d_model") + self.b_out
+        return mlp_out
+
+# %%
 '''Tests'''
 rand_input_test(Embed, [2, 4], float=False)
 rand_input_test(PosEmbed, [2, 4], float=False)
 rand_input_test(LayerNorm, [2, 4, 256])
 rand_input_test(Attention, [2, 4, 256])
+rand_input_test(MLP, [2, 4, 256])
 # %%
