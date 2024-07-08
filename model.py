@@ -265,6 +265,7 @@ def get_log_probs(
 '''
 Training
 '''
+# %%
 @dataclass
 class TransformerTrainingArgs():
     batch_size = 16
@@ -272,3 +273,27 @@ class TransformerTrainingArgs():
     max_steps_per_epoch = 200
     lr = 1e-3
     weight_decay = 1e-2
+# %%
+class TransformerTrainer:
+    def __init__(self, args: TransformerTrainingArgs, model: Transformer):
+        pass
+
+    def training_step(self, batch: Dict[str, Int[Tensor, "batch seq"]]) -> Float[Tensor, ""]:
+        '''
+        Calculates the cross entropy loss on the tokens in thh batch, and performs a gradient update step
+        '''
+        pass
+
+    def validation_step(self, batch: Dict[str, Int[Tensor, "batch seq"]]) -> Float[Tensor, ""]:
+        pass
+
+    def train(self):
+        '''
+        Trains the model
+        '''
+    
+    def train_loader(self) -> DataLoader:
+        pass
+    
+    def test_loader(self) -> DataLoader:
+        pass
