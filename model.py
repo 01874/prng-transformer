@@ -252,3 +252,13 @@ rand_input_test(MLP, [2, 4, 256])
 rand_input_test(Unembed, [2, 4, 256])
 rand_input_test(Transformer, [2, 4], float=False)
 # %%
+def get_log_probs(
+    logits: Float[Tensor, "batch position d_vocab"], 
+    tokens: Int[Tensor, "batch position"]
+) -> Float[Tensor, "batch position-1"]:
+
+    log_probs = logits.log_softmax(dim=-1)
+    # Get logprobs the first seq_len-1 predictions for comparison to real tokens
+    log_probs_for_tokens = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
+
+    return log_probs_for_tokens
