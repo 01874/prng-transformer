@@ -203,6 +203,30 @@ class MLP(nn.Module):
         mlp_out = einops.einsum(hidden, self.W_out, "batch position d_mlp, d_mlp d_model -> batch position d_model") + self.b_out
         return mlp_out
 
+class TransformerBlock(nn.Module):
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.cfg = cfg
+        self.ln1 = LayerNorm(cfg)
+        self.attn = Attention(cfg)
+        self.ln2 = LayerNorm(cfg)
+        self.mlp = MLP(cfg)
+
+    def forward(self, resid: Float[Tensor, "batch position d_model"]) -> Float[Tensor, "batch position d_model"]:
+        resid += self.attn(self.ln1(resid))
+        resid += self.mlp(self.ln2(resid))
+        return resid
+# %%
+class Unembed(nn.Module):
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.cfg = cfg
+        self.W_U = nn.Parameter(t.empty((cfg.d_model, cfg.d_vocab)))
+        nn.init.normal_(self.W_U, std=self.cfg.init_range)
+        self.b_U = nn.Parameter(t.zeros(cfg.d_vocab))
+    def forward(self, norm_resid_final: Float[Tensor, "batch position d_model"]) -> Float[Tensor, "batch position d_vocab"]:
+        return einops.einsum(norm_resid_final, self.W_U, "batch position d_model, d_model d_vocab -> batch position d_vocab") + self.b_U
+# %%
 # %%
 '''Tests'''
 rand_input_test(Embed, [2, 4], float=False)
@@ -210,4 +234,5 @@ rand_input_test(PosEmbed, [2, 4], float=False)
 rand_input_test(LayerNorm, [2, 4, 256])
 rand_input_test(Attention, [2, 4, 256])
 rand_input_test(MLP, [2, 4, 256])
+rand_input_test(Unembed, [2, 4, 256])
 # %%
