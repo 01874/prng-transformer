@@ -306,9 +306,22 @@ class TransformerTrainer:
         '''
         Trains the model
         '''
+        accuracy = np.nan
+        progress_bar = tqdm(total = self.args.max_steps_per_epoch * self.args.epochs)
+
+        for epoch in range(self.args.epochs):
+            for i, b in enumerate(self.train_loader()):
+                loss = self.trainign_step(b)
+                progress_bar.update()
+                progress_bar.set_description(f"Epoch {epoch+1}, loss: {loss:.3f}, accuracy: {accuracy:.2f}")
+                if i >= self.args.max_steps_per_epoch:
+                    break
+            correct = t.cat([self.validation_step(b) for b in self.test_loader()])
+            accuracy = correct.float().mean().item()
     
     def train_loader(self) -> DataLoader:
         pass
 
     def test_loader(self) -> DataLoader:
         pass
+# %%
