@@ -57,7 +57,6 @@ class Embed(nn.Module):
         nn.init.normal_(self.W_E, std=cfg.init_range)
 
     def forward(self, tokens: Int[Tensor, "batch position"]) -> Float[Tensor, "batch position d_model"]:
-        print(tokens.shape)
         return self.W_E[tokens]
 # %%
 class PosEmbed(nn.Module):
@@ -202,7 +201,7 @@ class MLP(nn.Module):
         hidden = gelu(hidden)
         mlp_out = einops.einsum(hidden, self.W_out, "batch position d_mlp, d_mlp d_model -> batch position d_model") + self.b_out
         return mlp_out
-
+# %%
 class TransformerBlock(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
@@ -227,6 +226,22 @@ class Unembed(nn.Module):
     def forward(self, norm_resid_final: Float[Tensor, "batch position d_model"]) -> Float[Tensor, "batch position d_vocab"]:
         return einops.einsum(norm_resid_final, self.W_U, "batch position d_model, d_model d_vocab -> batch position d_vocab") + self.b_U
 # %%
+class Transformer(nn.Module):
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.cfg = cfg
+        self.embed = Embed(cfg)
+        self.pos_embed = PosEmbed(cfg)
+        self.transformer_blocks = nn.ModuleList([TransformerBlock(cfg) for _ in range(cfg.n_layers)])
+        self.ln_final = LayerNorm(cfg)
+        self.unembed = Unembed(cfg)
+    
+    def forward(self, tokens: Int[Tensor, "batch position"]) -> Float[Tensor, "batch position d_vocab"]:
+        resid = self.embed(tokens) + self.pos_embed(tokens) # initial value of residual stream is just the way the model embeds the tokens
+        for tb in self.transformer_blocks:
+            resid = tb(resid)
+        logits = self.unembed(self.ln_final(resid))
+        return logits
 # %%
 '''Tests'''
 rand_input_test(Embed, [2, 4], float=False)
@@ -235,4 +250,5 @@ rand_input_test(LayerNorm, [2, 4, 256])
 rand_input_test(Attention, [2, 4, 256])
 rand_input_test(MLP, [2, 4, 256])
 rand_input_test(Unembed, [2, 4, 256])
+rand_input_test(Transformer, [2, 4], float=False)
 # %%
