@@ -262,3 +262,13 @@ def get_log_probs(
     log_probs_for_tokens = log_probs[:, :-1].gather(dim=-1, index=tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
 
     return log_probs_for_tokens
+'''
+Training
+'''
+@dataclass
+class TransformerTrainingArgs():
+    batch_size = 16
+    epochs = 10
+    max_steps_per_epoch = 200
+    lr = 1e-3
+    weight_decay = 1e-2
