@@ -276,16 +276,31 @@ class TransformerTrainingArgs():
 # %%
 class TransformerTrainer:
     def __init__(self, args: TransformerTrainingArgs, model: Transformer):
-        pass
+        super().__init__()
+        self.args = args
+        self.model = model
+        self.optim = t.optim.AdamW(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        self.step = 0
 
     def training_step(self, batch: Dict[str, Int[Tensor, "batch seq"]]) -> Float[Tensor, ""]:
         '''
         Calculates the cross entropy loss on the tokens in thh batch, and performs a gradient update step
         '''
-        pass
+        self.optim.zero_grad()
+        tokens = batch['tokens'].to(device)
+        logits = self.model(tokens)
+        loss = t.mean(-get_log_probs(logits, tokens))
+        loss.backward()
+        self.optim.step()
+        self.step += 1
+        return loss
 
     def validation_step(self, batch: Dict[str, Int[Tensor, "batch seq"]]) -> Float[Tensor, ""]:
-        pass
+        tokens = batch['tokens'].to(device)
+        logits = self.model(tokens)[:, :-1] # there is no way to verify if the prediction of the next token (not in the sequence) is correct
+        predictions = t.argmax(logits, dim=-1)
+        correct = (predictions == tokens[:, 1:]).flatten()
+        return correct
 
     def train(self):
         '''
@@ -294,6 +309,6 @@ class TransformerTrainer:
     
     def train_loader(self) -> DataLoader:
         pass
-    
+
     def test_loader(self) -> DataLoader:
         pass
